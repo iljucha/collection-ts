@@ -11,10 +11,8 @@
   "description": "go find some items",
   "homepage": "https://github.com/iljucha/collection-ts#readme",
   "keywords": [
-    "db",
     "collection",
-    "in-memory",
-    "persistent"
+    "modifier"
   ],
   "license": "ISC",
   "main": "index.ts",
@@ -27,5 +25,5 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",
-  "version": "0.0.10"
+  "version": "0.0.11"
 }
