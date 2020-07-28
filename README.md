@@ -3,7 +3,7 @@
 # Usage
 ## Import and create
 ```javascript
-import Collection from "@iljucha/collectuion-ts";
+import Collection from "@iljucha/collection-ts";
 
 let items = [
     { _id: 1, alias: "user1" },
