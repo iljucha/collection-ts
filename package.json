@@ -1,0 +1,31 @@
+{
+  "author": {
+    "name": "Ilja Bituzki"
+  },
+  "bugs": {
+    "url": "https://github.com/iljucha/collection-ts/issues"
+  },
+  "bundleDependencies": false,
+  "dependencies": {},
+  "deprecated": false,
+  "description": "go find some items",
+  "homepage": "https://github.com/iljucha/collection-ts#readme",
+  "keywords": [
+    "db",
+    "collection",
+    "in-memory",
+    "persistent"
+  ],
+  "license": "ISC",
+  "main": "index.ts",
+  "name": "@iljucha/collection-ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iljucha/collection-ts.git"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "type": "module",
+  "version": "0.0.9"
+}
