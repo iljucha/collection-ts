@@ -14,6 +14,49 @@ let items = [
 let DB = new Collection(items);
 ```
 
+## Query
+```javascript
+// Simple Query
+let Query = { id: "2a6074a4-5775-4221-96cf-914aa8d3e7f7" };
+
+// Nested Object Query
+Query = { "user.alias": "iljucha" };
+
+// Nested Array Query -> If environment[1] exists
+Query = { "environment.1": { $exists: true } };
+ 
+// $or-operated Query, matches all item in $or
+Query = {
+    $or: [
+        { id: { $regexp: /findme/i } }, // regexp.test(...)
+        { id: { $includes: "substring"} }, // str.includes(...)
+        { id: { $eq: "onlyme" } }, // value === input
+        { id: { $ne: "notme" } }, // value !== input
+        { id: { $lt: 5 } }, // value > input
+        { id: { $lte: 5 } }, // value >= input
+        { id: { $gt: 5 } }, // value < input
+        { id: { $gte: 5 } }, // value <= input
+        { id: { $in: ["findme", "orme"] } }, // arr.indexOf(input) >= 0
+        { id: { $nin: ["findmenot"] } }, // arr.indexOf(input) === -1
+        { id: { $exists: true } }, // property exists
+        { id: { $type: "string" } }, // value has type "string"
+    ]
+}
+ 
+// Complex Query
+Query = {
+    $or: [
+        { id: "2a6074a4-5775-4221-96cf-914aa8d3e7f7" },
+        { "user.alias": { $regexp: /ucha/i } },
+        { "user.name": { $regexp: /ucha/i } }
+    ],
+    $and: [
+        { "user.status": { $nin: ["banned", "unauthorized"] } },
+        { "user.lastDinner": { $includes: "salad" } }
+    ]
+}
+```
+
 ## Insert
 ```javascript
 DB.insertOne({ _id: 4, alias: "user4" });
