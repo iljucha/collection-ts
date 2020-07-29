@@ -1,5 +1,4 @@
 import { find, findSync } from "./methods";
-import "./index";
 import { Query, CursorOptions, Join } from "./types";
 
 export default class Cursor {
@@ -18,7 +17,7 @@ export default class Cursor {
      * @param items Object Array
      */
     constructor(query: Query, items: any[]) {
-        this._query = query;
+        this._query = query || {};
         this._items = items;
     }
 
@@ -31,51 +30,6 @@ export default class Cursor {
             $limit: this._limit,
             $reverse: this._reverse,
             $skip: this._skip
-        }
-    }
-
-    /**
-     * Collection of Settings
-     */
-    public get settings() {
-        return {
-            skip: this.skip,
-            limit: this.limit,
-            reverse: this.reverse,
-            join: this.join
-        }
-    }
-
-
-    /**
-     * Collection of async operators
-     */
-    public get async() {
-        return {
-            exec: this.exec,
-            count: this.count,
-            first: this.first,
-            last: this.last,
-            toArray: this.toArray,
-            toJSON: this.toJSON,
-            map: this.map,
-            forEach: this.forEach
-        }
-    }
-
-    /**
-     * Collection of synchronous operators
-     */
-    public get sync() {
-        return {
-            exec: this.execSync,
-            count: this.countSync,
-            first: this.firstSync,
-            last: this.firstSync,
-            toArray: this.toArraySync,
-            toJSON: this.toJSONSync,
-            map: this.mapSync,
-            forEach: this.forEachSync
         }
     }
 
@@ -128,7 +82,7 @@ export default class Cursor {
 
     /**
      * Join the results of other collections
-     * @param join 
+     * @param join
      */
     public join(join: Join): Cursor {
         this._joins.push(join);
@@ -141,7 +95,7 @@ export default class Cursor {
         let joined: any;
         let joining: any;
         let promises: any[] = [];
-        this._joins.map(link => promises.push(link.cursor.async.toArray()));
+        this._joins.map(link => promises.push(link.cursor.toArray()));
         let res = await Promise.all(promises);
         this.results.map(item => {
             joining = { ...item };
@@ -165,7 +119,7 @@ export default class Cursor {
         let joined: any;
         let joining: any;
         let joins: any[] = [];
-        this._joins.map(join => joins.push(join.cursor.sync.toArray()));
+        this._joins.map(join => joins.push(join.cursor.toArraySync()));
         this.results.map(item => {
             joining = { ...item };
             joined = 0;
@@ -181,13 +135,15 @@ export default class Cursor {
             }
         })
     }
- 
+
     /**
      * Executes search (asynchronous, preferred)
      */
     public async exec(): Promise<Cursor> {
         this._results = await find(this._query, this._items, this.findOptions);
-        await this.createJoins();
+        if (this._joins.length > 0) {
+          await this.createJoins();
+        }
         return this;
     }
 
@@ -196,7 +152,9 @@ export default class Cursor {
      */
     public execSync(): Cursor {
         this._results = findSync(this._query, this._items, this.findOptions);
-        this.createJoinsSync();
+        if (this._joins.length > 0) {
+          this.createJoinsSync();
+        }
         return this;
     }
 
@@ -204,7 +162,7 @@ export default class Cursor {
      * Executes search (asynchronous) and returns first item if available
      */
     public async first(): Promise<any> {
-        await this.async.exec();
+        await this.exec();
         if (this.results.length >= 0) {
             return this.results[0];
         }
@@ -215,7 +173,7 @@ export default class Cursor {
      * Executes search (synchronous) and returns first item if available
      */
     public firstSync(): any {
-        this.sync.exec();
+        this.execSync();
         if (this.results.length >= 0) {
             return this.results[0];
         }
@@ -226,7 +184,7 @@ export default class Cursor {
      * Executes search (asynchronous) and returns last item if available
      */
     public async last(): Promise<any> {
-        await this.async.exec();
+        await this.exec();
         if (this.results.length >= 0) {
             return this.results[this.results.length - 1];
         }
@@ -237,7 +195,7 @@ export default class Cursor {
      * Executes search (synchronous) and returns last item if available
      */
     public lastSync(): any {
-        this.sync.exec();
+        this.execSync();
         if (this.results.length >= 0) {
             return this.results[this.results.length - 1];
         }
@@ -245,12 +203,12 @@ export default class Cursor {
     }
 
     public async count(): Promise<number> {
-        await this.async.exec();
+        await this.exec();
         return this.results.length;
     }
 
     public countSync(): number {
-        this.sync.exec();
+        this.execSync();
         return this.results.length;
     }
 
@@ -258,7 +216,7 @@ export default class Cursor {
      * Executes search (asynchronous) and returns results
      */
     public async toArray(): Promise<any[]> {
-        await this.async.exec();
+        await this.exec();
         return this.results;
     }
 
@@ -266,14 +224,15 @@ export default class Cursor {
      * Executes search (synchronous) and returns results
      */
     public toArraySync(): any[] {
-        return this.sync.exec().results;
+        this.execSync();
+        return this.results;
     }
 
     /**
      * Executes search (asynchronous) and returns results
      */
     public async toJSON(): Promise<string> {
-        await this.async.exec();
+        await this.exec();
         return JSON.stringify(this.results);
     }
 
@@ -281,7 +240,7 @@ export default class Cursor {
      * Executes search (synchronous) and returns results
      */
     public toJSONSync(): string {
-        this.sync.exec();
+        this.execSync();
         return JSON.stringify(this.results);
     }
 
@@ -289,7 +248,7 @@ export default class Cursor {
      * Executes search (asynchronous) and performs the specified action for each element in an array
      */
     public async forEach(callbackfn: (value: any, index: number, array: any[]) => void): Promise<void> {
-        await this.async.exec();
+        await this.exec();
         return this.results.forEach(callbackfn);
     }
 
@@ -297,7 +256,7 @@ export default class Cursor {
      * Executes search (synchronous) and performs the specified action for each element in an array
      */
     public forEachSync(callbackfn: (value: any, index: number, array: any[]) => void): void {
-        this.sync.exec();
+        this.execSync();
         return this.results.forEach(callbackfn);
     }
 
@@ -306,7 +265,7 @@ export default class Cursor {
      * and returns an array that contains the results.
      */
     public async map(callbackfn: (value: any, index: number, array: any[]) => void): Promise<void[]> {
-        await this.async.exec();
+        await this.exec();
         return this.results.map(callbackfn);
     }
 
@@ -315,7 +274,7 @@ export default class Cursor {
      * and returns an array that contains the results.
      */
     public mapSync(callbackfn: (value: any, index: number, array: any[]) => void): void[] {
-        this.sync.exec();
+        this.execSync();
         return this.results.map(callbackfn);
     }
 }

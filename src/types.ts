@@ -24,7 +24,7 @@ export type Logics = {
    $exists?: boolean;
    $type?: string;
 };
-export type QueryOption = Item | { [property: string]: Logics }; 
+export type QueryOption = Item | { [property: string]: Logics };
 export type Query = Item | QueryOption | LogicGates;
 export type executableQuery = { [property: string]: Query };
 export type CursorOptions = {

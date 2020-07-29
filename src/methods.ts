@@ -1,6 +1,7 @@
-import { LOGICGATES } from "./logicgates";
-import { LOGICS } from "./logics";
 import {
+    Comparable,
+    Logic,
+    LogicGate,
     QueryOption,
     Query,
     CursorOptions,
@@ -8,35 +9,54 @@ import {
     executableLogicGate
 } from "./types";
 
-export function getType(value: any): string {
+const LOGICS: Logic = {
+    $regexp: (regexp: RegExp, str: string): boolean => regexp.test(str),
+    $includes: (substr: string, str: string): boolean => str.includes(substr),
+    $eq: (val1: any, val2: any): boolean => val1 === val2,
+    $ne: (val1: any, val2: any): boolean => val1 !== val2,
+    $lt: (val1: Comparable, val2: Comparable): boolean => {
+        val1 = typeof val1 === "string" ? val1.length : val1
+        val2 = typeof val2 === "string" ? val2.length : val2
+        return val2 < val1
+    },
+    $lte: (val1: Comparable, val2: Comparable): boolean => {
+        val1 = typeof val1 === "string" ? val1.length : val1
+        val2 = typeof val2 === "string" ? val2.length : val2
+        return val2 <= val1
+    },
+    $gt: (val1: Comparable, val2: Comparable): boolean => {
+        val1 = typeof val1 === "string" ? val1.length : val1
+        val2 = typeof val2 === "string" ? val2.length : val2
+        return val2 > val1
+    },
+    $gte: (val1: Comparable, val2: Comparable): boolean => {
+        val1 = typeof val1 === "string" ? val1.length : val1
+        val2 = typeof val2 === "string" ? val2.length : val2
+        return val2 >= val1
+    },
+    $in: (arr: any[], val: any): boolean => arr.indexOf(val) >= 0,
+    $nin: (arr: any[], val: any): boolean => arr.indexOf(val) === -1,
+    $exists: (bool: boolean, val: any): boolean => bool === true ? (val ? true : false) : (val ? false : true),
+    $type: (type: string, val: any): boolean => type === getType(val)
+}
+
+const LOGICGATES: LogicGate = {
+    $or: (queryArr: QueryOption, item: any): boolean => queryArr.some((query: Query) => {
+        const keys = Object.keys(query);
+        return keys.every(key => logic(query, item, key));
+    }),
+    $and: (queryArr: QueryOption, item: any): boolean => queryArr.every((query: Query) => {
+        const keys = Object.keys(query);
+        return keys.every(key => logic(query, item, key));
+    })
+}
+
+function getType(value: any): string {
     let type = typeof value;
     if (type === "object") {
         return value ? Object.prototype.toString.call(value).slice(8, -1) : "null";
     }
     return type;
-}
-
-function isObject(value: any): boolean {
-    return value !== null && Object.prototype.toString.call(value) === "[object Object]";
-}
-
-function flatten(obj: any): any {
-    return { ..._flatten(obj) };
-}
-
-function _flatten(child: any, path: any[] = []): any {
-    let keys: string[] = Object.keys(child);
-    let com: any = _combine(path, child, keys);
-    return [].concat(...com);
-}
-
-function _combine(path: any[], child: any, keys: string[]): any {
-    return keys.map((key: string) => {
-        return isObject(child[key])
-            ? _flatten(child[key], path.concat([key]))
-            : ({ [path.concat([key]).join(".")] : child[key] })
-        }
-    )
 }
 
 export function assert(condition: any, message: string): void {
@@ -45,7 +65,7 @@ export function assert(condition: any, message: string): void {
     }
 }
 
-export function logic(queryOption: QueryOption, item: any, key: string): boolean {
+function logic(queryOption: QueryOption, item: any, key: string): boolean {
     let $logic: executableLogic;
     const keys: string[] = Object.keys(queryOption[key])
     const kLength: number = keys.length;
@@ -59,11 +79,47 @@ export function logic(queryOption: QueryOption, item: any, key: string): boolean
     return true;
 }
 
+function plainObj(value: any): boolean {
+    return [
+        typeof value === "object",
+        value !== null,
+        !(value instanceof Date),
+        !(value instanceof RegExp),
+        !(Array.isArray(value) && value.length === 0),
+        !(value instanceof Map),
+        !(value instanceof Set)
+    ].every(Boolean);
+}
+
+function flatten(obj: any, path: any = null): any {
+    let value: any;
+    let newPath: string;
+    return Object.keys(obj).reduce((acc, key) => {
+        value = obj[key];
+        newPath = [path, key].filter(Boolean).join(".");
+        return plainObj(value)
+            ? { ...acc, ...flatten(value, newPath) }
+            : { ...acc, ...{ [newPath]: value } };
+    }, {});
+}
+
+function unflatten(obj: any): any {
+    let result: any = {};
+    Object.keys(obj).forEach(k => setValue(result, k, obj[k]));
+    return result;
+}
+
+function setValue(obj: any, path: string, value: any) {
+    let way = path.split(".");
+    let last: any = way.pop();
+    way.reduce((pV, cV, cI, arr) => pV[cV] = pV[cV] || (isFinite(cI + 1 in arr ? arr[cI + 1] : last) ? [] : {}), obj)[last] = value;
+}
+
 function match(query: Query, item: any, keys: string[]): boolean {
     let $logicGate: executableLogicGate;
     const copy: any = flatten({ ...item });
     let queryValue: any;
-    return keys.every((key: string) => {
+    return keys.every((key: string, index: number, array: string[]) => {
         // @ts-ignore
         queryValue = query[key];
         if (queryValue === copy[key]) {
@@ -78,9 +134,7 @@ function match(query: Query, item: any, keys: string[]): boolean {
                 return $logicGate(queryValue, copy);
             }
         }
-        else {
-            return false;
-        }
+        return false;
     })
 }
 
@@ -91,14 +145,13 @@ const findOptions: CursorOptions = {
 }
 
 export async function find(query: Query, items: any[], options: CursorOptions): Promise<any[]> {
-    return new Promise((resolve: (items: any[]) => void, reject: () => void) => {
-        resolve(findSync(query, items, options));
-    });
+    return findSync(query, items, options);
 }
 
-export function findSync(query: Query, items: any[], options: CursorOptions): any[] {
+export function findSync(query: Query = {}, items: any[] = [], options: CursorOptions): any[] {
     options = { ...findOptions, ...options };
     let { $limit, $reverse, $skip } = options;
+    let skipped: number = 0;
     let item: any;
     const len: number = items.length;
     const results: any[] = [];
@@ -107,13 +160,14 @@ export function findSync(query: Query, items: any[], options: CursorOptions): an
     if ($limit <= 0) {
         return results;
     }
+    if ($skip < 0) {
+        $skip = 0;
+    }
     const next = () => $reverse === false ? i++ : i--;
     while (items[i] && results.length !== $limit) {
         item = items[i];
         if (match(query, item, keys)) {
-            if ($skip <= results.length) {
-                results.push(item);
-            }
+            $skip <= skipped ? results.push(item) : skipped++;
         }
         next();
     }
