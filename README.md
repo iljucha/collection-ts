@@ -3,7 +3,7 @@
 # Usage
 ## Import and create
 ```javascript
-import Collection from "@iljucha/collection-ts";
+import { Collection } from "@iljucha/collection-ts";
 
 let items = [
     { _id: 1, alias: "user1" },
@@ -77,6 +77,27 @@ function something2() {
     let first = cursor.firstSync()
     let last = cursor.lastSync()
 }
+```
+
+### Joins
+```javascript
+let POSTS = new Collection([]);
+let USERS = new Collection([]);
+let USERIMAGES = new Collection([]);
+
+const USERID = "2a6074a4-5775-4221-96cf-914aa8d3e7f7";
+
+// Join results of USERS with the results of POSTS where key-values matches
+POSTS.find({ _user: USERID })
+    .join({
+        cursor: USERS.find({ _id: USERID }).limit(1).join({
+            cursor: USERIMAGES.find({ _user: USERID }).limit(1),
+            where: ["_id", "_user"],
+            as: "USERS-target-property"
+        }),
+        where: ["_user", "_id"],
+        as: "POSTS-target-property" // optional, will be joined on "_user" if not given
+    })//.toArray() or other
 ```
 
 ## JSON

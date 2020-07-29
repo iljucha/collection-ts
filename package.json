@@ -22,8 +22,12 @@
     "url": "git+https://github.com/iljucha/collection-ts.git"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^3.9.7"
   },
   "type": "module",
-  "version": "0.0.11"
+  "types": "src/index.d.ts",
+  "version": "0.0.17"
 }
