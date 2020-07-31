@@ -79,16 +79,8 @@ function logic(queryOption: QueryOption, item: any, key: string): boolean {
     return true;
 }
 
-function plainObj(value: any): boolean {
-    return [
-        typeof value === "object",
-        value !== null,
-        !(value instanceof Date),
-        !(value instanceof RegExp),
-        !(Array.isArray(value) && value.length === 0),
-        !(value instanceof Map),
-        !(value instanceof Set)
-    ].every(Boolean);
+function isObject(value: any): boolean {
+    return value !== null && Object.prototype.toString.call(value) === "[object Object]"
 }
 
 function flatten(obj: any, path: any = null): any {
@@ -97,22 +89,10 @@ function flatten(obj: any, path: any = null): any {
     return Object.keys(obj).reduce((acc, key) => {
         value = obj[key];
         newPath = [path, key].filter(Boolean).join(".");
-        return plainObj(value)
+        return isObject(value)
             ? { ...acc, ...flatten(value, newPath) }
             : { ...acc, ...{ [newPath]: value } };
     }, {});
-}
-
-function unflatten(obj: any): any {
-    let result: any = {};
-    Object.keys(obj).forEach(k => setValue(result, k, obj[k]));
-    return result;
-}
-
-function setValue(obj: any, path: string, value: any) {
-    let way = path.split(".");
-    let last: any = way.pop();
-    way.reduce((pV, cV, cI, arr) => pV[cV] = pV[cV] || (isFinite(cI + 1 in arr ? arr[cI + 1] : last) ? [] : {}), obj)[last] = value;
 }
 
 function match(query: Query, item: any, keys: string[]): boolean {

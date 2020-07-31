@@ -35,5 +35,5 @@ export type CursorOptions = {
 export type Join = {
    cursor: Cursor;
    where: [string, string];
-   as?: string;
+   as: string;
 };

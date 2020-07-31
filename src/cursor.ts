@@ -89,50 +89,56 @@ export default class Cursor {
         return this;
     }
 
+    /**
+     * Reset your Query Object with another one
+     * @param query 
+     */
+    public query(query: Query) {
+        this._query = query || {}
+        return this
+    }
+
+    /**
+     * Mix your Query Object
+     * @param query 
+     */
+    public mixQuery(query: Query) {
+        this._query = { ...this._query, ...query || {} }
+        return this
+    }
+
     private async createJoins() {
-        this._joinedResults = [];
-        let found: any;
-        let joined: any;
-        let joining: any;
-        let promises: any[] = [];
-        this._joins.map(link => promises.push(link.cursor.toArray()));
-        let res = await Promise.all(promises);
-        this.results.map(item => {
-            joining = { ...item };
-            joined = 0;
-            this._joins.map((link, counter) => {
-                found = res[counter].find((_item: any) => item[link.where[0]] === _item[link.where[1]]);
-                if (found) {
-                    joining[link.as || link.where[0]] = found;
-                    joined++;
-                }
-            })
-            if (this._joins.length === joined) {
-                this._joinedResults.push(joining);
-            }
+        let join: any;
+        let promises: Promise<any>[] = [];
+        let mixes: any[] = [];
+        this._joins.map((j, i) => {
+            mixes[i] = []
+            this._results.map((item) => mixes[i].push(item[j.where[0]]))
+            promises.push(j.cursor.mixQuery({ [j.where[1]]: { $in: mixes[i] } }).toArray())
+        })
+        let res = await Promise.all(promises)
+        this._results.map((item) => {
+            join = { ...item }
+            this._joins.map((j, i) => join[j.as] = { ...res[i].find((_i: any) => join[j.where[0]] === _i[j.where[1]]) })
+            this._joinedResults.push(join)
         })
     }
 
     private createJoinsSync() {
-        this._joinedResults = [];
-        let found: any;
-        let joined: any;
-        let joining: any;
+        let join: any;
         let joins: any[] = [];
-        this._joins.map(join => joins.push(join.cursor.toArraySync()));
-        this.results.map(item => {
-            joining = { ...item };
-            joined = 0;
-            this._joins.map((join, counter) => {
-                found = joins[counter].find((_item: any) => item[join.where[0]] === _item[join.where[1]]);
-                if (found) {
-                    joining[join.as || join.where[0]] = found;
-                    joined++;
-                }
+        let mixes: any[] = [];
+        this._joins.map((j, i) => {
+            mixes[i] = []
+            this._results.map((item) => mixes[i].push(item[j.where[0]]))
+            joins.push(j.cursor.mixQuery({ [j.where[1]]: { $in: mixes[i] } }).toArraySync())
+        })
+        this._results.map((item) => {
+            join = { ...item }
+            this._joins.map((j, i) => {
+                join[j.as] = { ...joins[i].find((_i: any) => join[j.where[0]] === _i[j.where[1]]) }
             })
-            if (this._joins.length === joined) {
-                this._joinedResults.push(joining);
-            }
+            this._joinedResults.push(join)
         })
     }
 
